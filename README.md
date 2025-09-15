@@ -77,42 +77,53 @@ the symbols are always located in the same module.
 ### Simple demo
 
 The `simple-demo` is a simplified version with minimal code and no error checks.
-It exhibits the difference between two symbols.
+It exhibits the difference between two symbols: `BCryptEncrypt` from `bcrypt.dll`
+and `CertOpenStore` from `crypt32.dll`.
 
-Code:
-~~~
-#include <iostream>
-#include <windows.h>
-#include <bcrypt.h>
-
-#pragma comment(lib, "crypt32.lib")
-#pragma comment(lib, "bcrypt.lib")
-
-void test(const char* name, const void* address)
-{
-    wchar_t path[2048] = { 0 };
-    HMODULE hmod = nullptr;
-    const DWORD flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
-    GetModuleHandleExW(flags, LPCWSTR(address), &hmod);
-    GetModuleFileNameW(hmod, path, DWORD(ARRAYSIZE(path)));
-    std::wcout << name << " in " << path << std::endl;
-}
-
-int wmain(int argc, wchar_t* argv[])
-{
-    test("BCryptEncrypt", BCryptEncrypt);
-    test("CertOpenStore", CertOpenStore);
-}
-~~~
+Each symbol is first used as a direct reference in the code. Its address is 
+displayed, with the name of the module at that address. Then, the symbol is
+explicitly loaded, as a string, from the expected DLL and the returned
+address is displayed.
 
 Release mode:
 ~~~
-BCryptEncrypt in C:\WINDOWS\SYSTEM32\bcrypt.dll
-CertOpenStore in C:\WINDOWS\System32\CRYPT32.dll
+BCryptEncrypt at 7ff82d9fb200, linked from C:\WINDOWS\SYSTEM32\bcrypt.dll
+BCryptEncrypt at 7ff82d9fb200, loaded from bcrypt.dll
+CertOpenStore at 7ff82ddec5f0, linked from C:\WINDOWS\System32\CRYPT32.dll
+CertOpenStore at 7ff82ddec5f0, loaded from crypt32.dll
 ~~~
+
+In release mode, for the two symbols, the symbol which was linked from the source
+code and the address which was explicitly loaded from the DLL are identical.
 
 Debug mode:
 ~~~
-BCryptEncrypt in D:\test\win-memory-map\build\Debug-x64\simple-demo.exe
-CertOpenStore in C:\WINDOWS\System32\CRYPT32.dll
+BCryptEncrypt at 7ff6ee6813d9, linked from D:\shared\win-memory-map\build\Debug-x64\simple-demo.exe
+BCryptEncrypt at 7ff82d9fb200, loaded from bcrypt.dll
+CertOpenStore at 7ff82ddec5f0, linked from C:\WINDOWS\System32\CRYPT32.dll
+CertOpenStore at 7ff82ddec5f0, loaded from crypt32.dll
 ~~~
+
+In debug mode, the symbol `BCryptEncrypt` behaves differently. The symbol which
+is linked from the source code is located inside the main executable. In practice,
+this is true for all symbols in `bcrypt.dll`.
+
+So, the obvious idea is that the debug version was linked against a static library
+version of `bcrypt.lib` while the release version was linked against the dynamic
+library. And this is true for `bcrypt.dll`, not `crypt32.dll`, not any other
+library.
+
+However, there is only one version of `bcrypt.lib` for x64 on the disk,
+in `C:\Program Files (x86)\Windows Kits\10\Lib\10.0.26100.0\um\x64\bcrypt.lib`.
+Using command `dumpbin`, there is no specific static code.
+
+Looking at the declarations in the various system headers, we see that
+all functions, from all system libraries, have a directive `__declspec(dllimport)`,
+except all functions from `bcrypt.h` which do not have this directive.
+
+Questions:
+- How can the link operation succeed without `__declspec(dllimport)`?
+- Why does the release version link against the DLL while the debug version
+  links against some static code?
+- Where does this static code come from, since the import library `bcrypt.dll`
+  does not contain any code?
