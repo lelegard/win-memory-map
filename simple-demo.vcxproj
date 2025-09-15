@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{CFC399DF-44AF-4DCE-AD31-80DFD1123ABC}</ProjectGuid>
+    <RootNamespace>win-memory-map</RootNamespace>
+  </PropertyGroup>
+
+  <Import Project="$(MSBuildProjectDirectory)\common.props" />
+
+  <ItemGroup>
+    <ClCompile Include="simple-demo.cpp" />
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+
+</Project>

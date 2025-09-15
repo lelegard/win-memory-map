@@ -128,7 +128,7 @@ HMODULE WinModuleFromAddress(const void* addr)
 // Application entry point.
 //----------------------------------------------------------------------------
 
-int wmain(int argc, wchar_t* argv[], wchar_t* envp[])
+int wmain(int argc, wchar_t* argv[])
 {
     // Build list of modules.
     std::vector<HMODULE> hmods;

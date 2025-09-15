@@ -45,7 +45,7 @@ Sample output in debug mode:
 ====== Modules (15) ======
 0x282B0000-0x284B3FFF : C:\WINDOWS\SYSTEM32\ucrtbased.dll
 0x69670000-0x69750FFF : C:\WINDOWS\SYSTEM32\MSVCP140D.dll
-0x848D0000-0x84909FFF : D:\shared\win-memory-map\build\Debug-x64\win-memory-map.exe
+0x848D0000-0x84909FFF : D:\test\win-memory-map\build\Debug-x64\win-memory-map.exe
 0xB7190000-0xB7418FFF : C:\WINDOWS\SYSTEM32\WININET.dll
 0xB7BA0000-0xB7BCFFFF : C:\WINDOWS\SYSTEM32\VCRUNTIME140D.dll
 0xC0170000-0xC017EFFF : C:\WINDOWS\SYSTEM32\VCRUNTIME140_1D.dll
@@ -60,10 +60,10 @@ Sample output in debug mode:
 0xC8FC0000-0xC9228FFF : C:\WINDOWS\SYSTEM32\ntdll.dll
 
 ====== Some symbols ======
-0x848E1055 : wmain -> D:\shared\win-memory-map\build\Debug-x64\win-memory-map.exe
-0x848E17A3 : EncryptMessage -> D:\shared\win-memory-map\build\Debug-x64\win-memory-map.exe
-0x848E17EE : BCryptEncrypt -> D:\shared\win-memory-map\build\Debug-x64\win-memory-map.exe
-0x848E1947 : BCryptImportKey -> D:\shared\win-memory-map\build\Debug-x64\win-memory-map.exe
+0x848E1055 : wmain -> D:\test\win-memory-map\build\Debug-x64\win-memory-map.exe
+0x848E17A3 : EncryptMessage -> D:\test\win-memory-map\build\Debug-x64\win-memory-map.exe
+0x848E17EE : BCryptEncrypt -> D:\test\win-memory-map\build\Debug-x64\win-memory-map.exe
+0x848E1947 : BCryptImportKey -> D:\test\win-memory-map\build\Debug-x64\win-memory-map.exe
 0xB71C0C70 : InternetOpenW -> C:\WINDOWS\SYSTEM32\WININET.dll
 0xC51D1C00 : ApplyControlToken -> C:\WINDOWS\SYSTEM32\SSPICLI.DLL
 0xC51D1FE0 : InitializeSecurityContextW -> C:\WINDOWS\SYSTEM32\SSPICLI.DLL
@@ -73,3 +73,46 @@ Sample output in debug mode:
 
 Because of ASLR, the addresses are different in each execution. However,
 the symbols are always located in the same module.
+
+### Simple demo
+
+The `simple-demo` is a simplified version with minimal code and no error checks.
+It exhibits the difference between two symbols.
+
+Code:
+~~~
+#include <iostream>
+#include <windows.h>
+#include <bcrypt.h>
+
+#pragma comment(lib, "crypt32.lib")
+#pragma comment(lib, "bcrypt.lib")
+
+void test(const char* name, const void* address)
+{
+    wchar_t path[2048] = { 0 };
+    HMODULE hmod = nullptr;
+    const DWORD flags = GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT;
+    GetModuleHandleExW(flags, LPCWSTR(address), &hmod);
+    GetModuleFileNameW(hmod, path, DWORD(ARRAYSIZE(path)));
+    std::wcout << name << " in " << path << std::endl;
+}
+
+int wmain(int argc, wchar_t* argv[])
+{
+    test("BCryptEncrypt", BCryptEncrypt);
+    test("CertOpenStore", CertOpenStore);
+}
+~~~
+
+Release mode:
+~~~
+BCryptEncrypt in C:\WINDOWS\SYSTEM32\bcrypt.dll
+CertOpenStore in C:\WINDOWS\System32\CRYPT32.dll
+~~~
+
+Debug mode:
+~~~
+BCryptEncrypt in D:\test\win-memory-map\build\Debug-x64\simple-demo.exe
+CertOpenStore in C:\WINDOWS\System32\CRYPT32.dll
+~~~
